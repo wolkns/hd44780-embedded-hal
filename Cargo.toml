@@ -2,7 +2,7 @@
 name = "hd44780-embedded-hal"
 authors = ["Markus Halder <markushalder0208@gmail.com>"]
 description = "Driver for HD44780-LCD ontop of embedded-hal(-async). (I2C and GPIO interface)"
-categories = ["embedded", "driver", "lcd", "i2c", "gpio"]
+categories = ["embedded", "hardware-support", "no-std"]
 #documentation = "https://docs.rs/hd44780" #TODO
 edition = "2024"
 license = "MIT"
