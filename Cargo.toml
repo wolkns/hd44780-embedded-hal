@@ -7,7 +7,7 @@ categories = ["embedded", "driver", "lcd", "i2c", "gpio", "no-std"]
 edition = "2024"
 license = "MIT"
 readme = "README.md"
-#repository = "https://github.com/.." #TODO
+repository = "https://github.com/wolkns/hd44780-embedded-hal"
 version = "0.1.0"
 
 
