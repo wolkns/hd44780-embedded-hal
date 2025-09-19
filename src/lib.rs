@@ -6,8 +6,8 @@ pub mod types;
 pub mod instructions;
 pub mod characters;
 
+pub use crate::instructions::*;
 
-use crate::instructions::*;
 use core::fmt::{self, Write, Arguments};
 
 const FMT_BUFFER_SIZE:usize = 64;
