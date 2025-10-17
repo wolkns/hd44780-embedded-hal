@@ -3,6 +3,8 @@
 /// This ROM include ASCII chars: ' ' (space) <-> '~'
 ///                               0x20        <-> 0x7d
 /// Except the ASCI '\' char (0x5c) represents the Yen Sign
+#[derive(Clone, Copy)]
+#[repr(u8)]
 pub enum NonASCIIA00 {
     // ASCII Realm
     // 0x00 <-> 0x0f  CG RAM
@@ -118,12 +120,18 @@ pub enum NonASCIIA00 {
     AllWhite            = 0xfe,
     AllBlack            = 0xff,
 }
-
+impl Into<u8> for NonASCIIA00 {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
 
 
 /// Non ASCII chars for ROM Coce: A02 (european)
 /// This ROM include ASCII chars: ' ' (space) <-> '~'
 ///                               0x20        <-> 0x7e
+#[derive(Clone, Copy)]
+#[repr(u8)]
 pub enum NonASCIIA02 {
     // ASCII Realm
     // 0x00 <-> 0x0f  CG RAM
@@ -298,12 +306,19 @@ pub enum NonASCIIA02 {
     LatinSmallThorn       = 0xfe, // U+00fe
     LatinSmallYDiaeresis  = 0xff, // U+00ff
 }
+impl Into<u8> for NonASCIIA02 {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
 
 
 /// There are 8 possible Custom Chars for Font 5x8.
 /// Character codes are: 0b0000*xxx
 /// * has no effect. x bits can be 0 or 1
 /// 
+#[derive(Clone, Copy)]
+#[repr(u8)]
 pub enum CustomFont5x8 {
     Char0=0b0000_1000,
     Char1=0b0000_1001,
@@ -314,15 +329,27 @@ pub enum CustomFont5x8 {
     Char6=0b0000_1110,
     Char7=0b0000_1111,
 }
+impl Into<u8> for CustomFont5x8 {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
 
 
 /// There are 4 possible Custom Chars for Font 5x10.
 /// Character codes are: 0b0000*xx*
 /// * has no effect. x bits can be 0 or 1
 /// 
+#[derive(Clone, Copy)]
+#[repr(u8)]
 pub enum CustomFont5x10 {
     Char0=0b0000_1001,
     Char1=0b0000_1011,
     Char2=0b0000_1101,
     Char3=0b0000_1111,
+}
+impl Into<u8> for CustomFont5x10 {
+    fn into(self) -> u8 {
+        self as u8
+    }
 }
