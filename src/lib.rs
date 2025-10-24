@@ -39,6 +39,8 @@ impl From<&Hd44780Error> for &'static str
 }
 
 
+
+
 struct Buffer<'a> {
     buf : &'a mut[u8],
     len : usize,

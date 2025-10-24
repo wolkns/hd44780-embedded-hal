@@ -22,6 +22,8 @@ where
     address: i2c::SevenBitAddress,
     delay: DELAY,
     enc: ENC,
+    // backlight satete needed,
+    // because it is sent in every i2c communication
     bl: bool,
 }
 
@@ -50,7 +52,7 @@ where
     DELAY: delay::DelayNs,
     ENC: Pcf8574EncoderTrait,
 {
-    fn init(&mut self, fnset_lines:FnsetLines, fnset_font:FnsetFont) -> Result<(), super::InterfaceError> {
+    fn init(&mut self, fnset_lines:FnsetLines, fnset_font:FnsetFont) -> Result<(), InterfaceError> {
         let payload = self.enc.encode::<false, false>(self.bl, 
             CmdOptions::Fnset as u8 | FnsetDataLen::Bit8 as u8
         );
@@ -238,14 +240,6 @@ where
         Ok(())
     }
 
-    async fn delay_us(
-        &mut self, 
-        us: u32
-    ) -> ()
-    {
-        self.delay.delay_us(us).await;
-    }
-
     async fn backlight(
         &mut self, 
         bl:bool
@@ -257,6 +251,14 @@ where
             &self.enc.encode::<false,false>(self.bl, 0x00)[1..2]
         ).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
         Ok(())
+    }
+
+    async fn delay_us(
+        &mut self, 
+        us: u32
+    ) -> ()
+    {
+        self.delay.delay_us(us).await;
     }
 }
 
