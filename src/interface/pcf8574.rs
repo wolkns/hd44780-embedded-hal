@@ -57,14 +57,21 @@ where
             CmdOptions::Fnset as u8 | FnsetDataLen::Bit8 as u8
         );
         
+        // 8-bit mode
         self.i2c.write(self.address, 
             &payload[..2]
         ).map_err(|_| InterfaceError::Pcf8574I2cError)?;
+
         self.delay.delay_us(4_100);
+
+        // 8-bit mode
         self.i2c.write(self.address, 
             &payload[..2]
         ).map_err(|_| InterfaceError::Pcf8574I2cError)?;
+
         self.delay.delay_us(100);
+        
+        // 8-bit mode
         self.i2c.write(self.address, 
             &payload[..2]
         ).map_err(|_| InterfaceError::Pcf8574I2cError)?;
@@ -72,11 +79,13 @@ where
         let payload = self.enc.encode::<false, false>(self.bl,
             CmdOptions::Fnset as u8 | FnsetDataLen::Bit4 as u8 | fnset_lines as u8 | fnset_font as u8
         );
+
+        // 4-bit mode
         self.i2c.write(self.address, 
             &payload[..2]
         ).map_err(|_| InterfaceError::Pcf8574I2cError)?;
 
-        // now in 4-bit mode
+        // --> now in 4-bit mode
 
         self.i2c.write(self.address, 
             &payload
@@ -150,14 +159,21 @@ where
             CmdOptions::Fnset as u8 | FnsetDataLen::Bit8 as u8
         );
         
+        // 8-bit mode
         self.i2c.write(self.address, 
             &payload[..2]
         ).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        
         self.delay.delay_us(4_100).await;
+
+        // 8-bit mode
         self.i2c.write(self.address, 
             &payload[..2]
         ).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        
         self.delay.delay_us(100).await;
+        
+        // 8-bit mode
         self.i2c.write(self.address, 
             &payload[..2]
         ).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
@@ -165,11 +181,13 @@ where
         let payload = self.enc.encode::<false, false>(self.bl,
             CmdOptions::Fnset as u8 | FnsetDataLen::Bit4 as u8 | fnset_lines as u8 | fnset_font as u8
         );
+
+        // 4-bit mode
         self.i2c.write(self.address, 
             &payload[..2]
         ).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
 
-        // now in 4-bit mode
+        // --> now in 4-bit mode
 
         self.i2c.write(self.address, 
             &payload
