@@ -1,8 +1,17 @@
+use core::fmt::Write;
 
 /// Non ASCII chars for ROM Coce: A00 (japanese)
 /// This ROM include ASCII chars: ' ' (space) <-> '~'
 ///                               0x20        <-> 0x7d
 /// Except the ASCI '\' char (0x5c) represents the Yen Sign
+/// 
+/// 
+/// It implements  [`core::fmt::Display`] so this characters can be written
+/// useing format_args:
+/// ```
+/// let lcd : impl Hd44780Trait = ...
+/// lcd_write!(lcd, "{}={}", NonASCIIA02::GreekSmallPi, 3.1415);
+/// ```
 #[derive(Clone, Copy)]
 #[repr(u8)]
 pub enum NonASCIIA00 {
@@ -15,7 +24,7 @@ pub enum NonASCIIA00 {
     RightwardsArrow     = 0x7e, // U+2192
     LeftwardsArrow      = 0x7f, // U+2190
 
-    // None ASCII Realm
+    // Non ASCII Realm
     // 0x80 <-> 0x9f  All White
     // 0xa0           All White
     
@@ -120,16 +129,44 @@ pub enum NonASCIIA00 {
     AllWhite            = 0xfe,
     AllBlack            = 0xff,
 }
+
 impl Into<u8> for NonASCIIA00 {
     fn into(self) -> u8 {
         self as u8
     }
 }
 
+impl Into<u8> for &NonASCIIA00 {
+    fn into(self) -> u8 {
+        *self as u8
+    }
+}
+
+impl core::fmt::Display for NonASCIIA00 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_char(
+            unsafe {
+                // The LCD has its own charachter set (non unicode).
+                // Unchecked conversion needed for non ASCII characters.
+                char::from_u32_unchecked(*self as u32)
+            }
+        )
+    }
+}
+
+
+
 
 /// Non ASCII chars for ROM Coce: A02 (european)
 /// This ROM include ASCII chars: ' ' (space) <-> '~'
 ///                               0x20        <-> 0x7e
+/// 
+/// It implements  [`core::fmt::Display`] so this characters can be written
+/// useing format_args:
+/// ```
+/// let lcd : impl Hd44780Trait = ...
+/// lcd_write!(lcd, "{}={}", NonASCIIA02::GreekSmallPi, 3.1415);
+/// ```
 #[derive(Clone, Copy)]
 #[repr(u8)]
 pub enum NonASCIIA02 {
@@ -154,7 +191,7 @@ pub enum NonASCIIA02 {
     // 0x20 <-> 0x7e  Corresponde with ASCI
     House  = 0x7f, // U+2303
 
-    // None ASCII Realm
+    // Non ASCII Realm
     CyrillicBe            = 0x80, // U+0411
     CyrillicDe            = 0x81, // U+0414
     CyrillicZhe           = 0x82, // U+0416
@@ -306,16 +343,36 @@ pub enum NonASCIIA02 {
     LatinSmallThorn       = 0xfe, // U+00fe
     LatinSmallYDiaeresis  = 0xff, // U+00ff
 }
+
 impl Into<u8> for NonASCIIA02 {
     fn into(self) -> u8 {
         self as u8
     }
 }
 
+impl Into<u8> for &NonASCIIA02 {
+    fn into(self) -> u8 {
+        *self as u8
+    }
+}
 
-/// There are 8 possible Custom Chars for Font 5x8.
-/// Character codes are: 0b0000*xxx
-/// * has no effect. x bits can be 0 or 1
+impl core::fmt::Display for NonASCIIA02 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_char(
+            unsafe {
+                // The LCD has its own charachter set (non unicode).
+                // Unchecked conversion needed for non ASCII characters.
+                char::from_u32_unchecked(*self as u32)
+            }
+        )
+    }
+}
+
+
+/// Available custom chars for [`crate::types::DisplayTypeFont5x8`].
+/// 
+/// Encoded with pattern: 0b0000*xxx
+///     (* has no effect)
 /// 
 #[derive(Clone, Copy)]
 #[repr(u8)]
@@ -329,17 +386,31 @@ pub enum CustomFont5x8 {
     Char6=0b0000_1110,
     Char7=0b0000_1111,
 }
+
 impl Into<u8> for CustomFont5x8 {
     fn into(self) -> u8 {
         self as u8
     }
 }
 
+impl Into<u8> for &CustomFont5x8 {
+    fn into(self) -> u8 {
+        *self as u8
+    }
+}
 
-/// There are 4 possible Custom Chars for Font 5x10.
-/// Character codes are: 0b0000*xx*
-/// * has no effect. x bits can be 0 or 1
+impl core::fmt::Display for CustomFont5x8 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_char(*self as u8 as char)
+    }
+
+}
+
+/// Available custom chars for [`crate::types::DisplayTypeFont5x10`].
 /// 
+/// Encoded with pattern: 0b0000*xx* 
+///     (* has no effect)
+///
 #[derive(Clone, Copy)]
 #[repr(u8)]
 pub enum CustomFont5x10 {
@@ -348,8 +419,22 @@ pub enum CustomFont5x10 {
     Char2=0b0000_1101,
     Char3=0b0000_1111,
 }
+
 impl Into<u8> for CustomFont5x10 {
     fn into(self) -> u8 {
         self as u8
     }
+}
+
+impl Into<u8> for &CustomFont5x10 {
+    fn into(self) -> u8 {
+        *self as u8
+    }
+}
+
+impl core::fmt::Display for CustomFont5x10 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_char(*self as u8 as char)
+    }
+
 }
