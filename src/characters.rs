@@ -3,7 +3,7 @@ use core::fmt::Write;
 /// Non ASCII chars for ROM Coce: A00 (japanese)
 /// This ROM include ASCII chars: ' ' (space) <-> '~'
 ///                               0x20        <-> 0x7d
-/// Except the ASCI '\' char (0x5c) represents the Yen Sign
+/// Except the ASCII '\' char (0x5c) represents the Yen Sign
 /// 
 /// 
 /// It implements  [`core::fmt::Display`] so this characters can be written
@@ -18,9 +18,9 @@ pub enum NonASCIIA00 {
     // ASCII Realm
     // 0x00 <-> 0x0f  CG RAM
     // 0x10 <-> 0x1f  All White
-    // 0x20 <-> 0x5b  Corresponde with ASCI
+    // 0x20 <-> 0x5b  Corresponde with ASCII
     YenSign             = 0x5c, // U+00A5 , ASCII: '\'
-    // 0x5d <-> 0x7d  Corresponde with ASCI
+    // 0x5d <-> 0x7d  Corresponde with ASCII
     RightwardsArrow     = 0x7e, // U+2192
     LeftwardsArrow      = 0x7f, // U+2190
 
@@ -188,7 +188,7 @@ pub enum NonASCIIA02 {
     GreaterThanOrEqual    = 0x1d, // U+2265
     TrianglePointingUp    = 0x1e, // U+2bc5
     TrianglePointingDown  = 0x1f, // U+2bc6
-    // 0x20 <-> 0x7e  Corresponde with ASCI
+    // 0x20 <-> 0x7e  Corresponde with ASCII
     House  = 0x7f, // U+2303
 
     // Non ASCII Realm

@@ -35,7 +35,7 @@ pub enum EntryDir { // increment or decrement address counter (DDRAM or CGRAM/RO
 /// Also, writing into or reading out from [`CGRAM`] won't shift the dispaly.
 #[derive(Copy, Clone)]
 #[repr(u8)]
-pub enum EntryAds { // Accompanies display shift
+pub enum EntryAds {
     Off = 0x00,
     On  = 0x01,
 }
