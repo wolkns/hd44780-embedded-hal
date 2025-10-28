@@ -23,7 +23,7 @@ where
     delay: DELAY,
     enc: ENC,
     // backlight satete needed,
-    // because it is sent in every i2c communication
+    // it is sent in every i2c communication
     bl: bool,
 }
 
@@ -126,11 +126,13 @@ where
     }
 
     fn backlight(&mut self, bl:bool) -> Result<(), InterfaceError> {
-        self.bl = bl;
         self.i2c.write(
             self.address, 
-            &self.enc.encode::<false,false>(self.bl, 0x00)[1..2]
+            // only one byte sent, with enable pin kept low
+            // this only updates the backlight state
+            &self.enc.encode::<false,false>(bl, 0x00)[1..2]
         ).map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.bl = bl;
         Ok(())
     }
 
@@ -263,11 +265,13 @@ where
         bl:bool
     ) -> Result<(), InterfaceError> 
     {
-        self.bl = bl;
         self.i2c.write(
             self.address, 
-            &self.enc.encode::<false,false>(self.bl, 0x00)[1..2]
+            // only one byte sent, with enable pin kept low
+            // this only updates the backlight state
+            &self.enc.encode::<false,false>(bl, 0x00)[1..2]
         ).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.bl = bl;
         Ok(())
     }
 
