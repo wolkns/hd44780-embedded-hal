@@ -1,10 +1,16 @@
 
 use crate::instructions::{FnsetLines, FnsetFont};
-
+use crate::characters::{CustomFont5x8, CustomFont5x10};
 
 
 pub trait DisplayTypeTrait
 {
+    type Font : Into<u8>;
+    type CharMap : AsRef<[u8]>;
+
+    // conversion from Charachter Code (DDRAM) to CGRAM address
+    fn into_cgram(charcode : Self::Font) -> u8;
+
     fn rows(&self) -> u8;
     fn cols(&self) -> u8;
     fn lines(&self) -> FnsetLines;
@@ -27,6 +33,13 @@ impl DisplayTypeFont5x8
 }
 impl DisplayTypeTrait for DisplayTypeFont5x8
 {
+    type Font = CustomFont5x8;
+    type CharMap = [u8; 8];
+
+    fn into_cgram(charcode : Self::Font) -> u8 {
+        ( Into::<u8>::into(charcode) & 0b0000_0111 ) << 3
+    }
+
     fn rows(&self) -> u8 {
         self.rows
     }
@@ -56,6 +69,13 @@ impl DisplayTypeFont5x10
 }
 impl DisplayTypeTrait for DisplayTypeFont5x10
 {
+    type Font = CustomFont5x10;
+    type CharMap = [u8; 10];
+
+    fn into_cgram(charcode : Self::Font) -> u8 {
+        ( Into::<u8>::into(charcode) & 0b0000_0110 ) << 3
+    }
+
     fn rows(&self) -> u8 {
         self.rows
     }

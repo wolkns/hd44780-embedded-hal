@@ -4,13 +4,63 @@
 
 pub mod interface;
 pub mod types;
-pub mod instructions;
 pub mod characters;
 
-pub use crate::instructions::*;
+
+mod instructions;
+pub use crate::instructions::{
+    EntryDir,
+    EntryAds,
+
+    DpState,
+    DpCursor,
+    DpBlink,
+
+    ShiftType,
+    ShiftDir,
+
+    FnsetDataLen,
+    FnsetLines,
+    FnsetFont
+};
 
 
-const FMT_BUFFER_SIZE:usize = 64;
+#[cfg(not(feature="async"))]
+mod blocking;
+#[cfg(not(feature="async"))]
+pub use crate::blocking::Hd44780Trait;
+
+
+#[cfg(feature="async")]
+mod asyncron;
+#[cfg(feature="async")]
+pub use crate::asyncron::Hd44780Trait;
+
+mod buffer;
+
+
+pub struct Hd44780<INTERFACE, DPTYPE>
+where 
+    INTERFACE: interface::InterfaceTrait,
+    DPTYPE: types::DisplayTypeTrait,
+{
+    interface: INTERFACE,
+    dp_type: DPTYPE,
+}
+
+impl<INTERFACE, DPTYPE> Hd44780<INTERFACE, DPTYPE>
+where
+    INTERFACE: interface::InterfaceTrait,
+    DPTYPE: types::DisplayTypeTrait,
+{
+    pub fn new(interface: INTERFACE, dp_type: DPTYPE) -> Self {
+        Self {
+            interface,
+            dp_type,
+        }
+    }
+}
+
 
 #[derive(Debug, Copy, Clone)]
 pub enum Hd44780Error {
@@ -38,429 +88,7 @@ impl From<&Hd44780Error> for &'static str
 }
 
 
-pub struct Hd44780<INTERFACE, DPTYPE>
-where 
-    INTERFACE: interface::InterfaceTrait,
-    DPTYPE: types::DisplayTypeTrait,
-{
-    interface: INTERFACE,
-    dp_type: DPTYPE,
-}
-
-
-#[cfg(not(feature="async"))]
-pub trait Hd44780Trait {
-    fn init(&mut self) -> Result<(), Hd44780Error>;
-    
-    fn clear(&mut self) -> Result<(), Hd44780Error>;
-    fn home(&mut self) -> Result<(), Hd44780Error>;
-    fn entry(&mut self, dir:EntryDir, ads:EntryAds) -> Result<(), Hd44780Error>;
-    fn display(&mut self, state:DpState, cursor:DpCursor, blink:DpBlink) -> Result<(), Hd44780Error>;
-    fn shift(&mut self, dp_type:ShiftType, dir:ShiftDir) -> Result<(), Hd44780Error>;
-    fn position(&mut self, row:u8, col:u8) -> Result<(), Hd44780Error>;
-    
-    fn print_bytes(&mut self, bytes:&[u8]) -> Result<(), Hd44780Error>;
-    fn print_str(&mut self, string:&str) -> Result<(), Hd44780Error> {
-        self.print_bytes(string.as_bytes())?;
-        Ok(())
-    }
-    fn print_fmt(&mut self, args:core::fmt::Arguments<'_>) -> Result<(), Hd44780Error> {
-        let mut data:[u8;FMT_BUFFER_SIZE] = [0;FMT_BUFFER_SIZE];
-        let mut buf = UnsafeBuffer::new(&mut data);
-
-        match core::fmt::write(&mut buf, args)
-        {
-            Err(e) => Err(Hd44780Error::FmtError(e)),
-            Ok(_) => self.print_str(buf.as_str())
-        }
-    }
-    
-    fn backlight(&mut self, bl:bool) -> Result<(), Hd44780Error>;
-
-    fn read_data(&mut self, buffer:&mut [u8]) -> Result<(), Hd44780Error>;
-    fn read_address_counter(&mut self) -> Result<u8, Hd44780Error>;
-    fn is_busy(&mut self) -> Result<bool, Hd44780Error>;
-}
-
-#[cfg(not(feature="async"))]
-impl<INTERFACE, DPTYPE> Hd44780<INTERFACE, DPTYPE>
-where
-    INTERFACE: interface::InterfaceTrait,
-    DPTYPE: types::DisplayTypeTrait,
-{
-    pub fn new(interface: INTERFACE, dp_type: DPTYPE) -> Self {
-        Self {
-            interface,
-            dp_type,
-        }
-    }
-}
-
-#[cfg(not(feature="async"))]
-impl<INTERFACE, DPTYPE> Hd44780Trait for Hd44780<INTERFACE, DPTYPE>
-where
-    INTERFACE: interface::InterfaceTrait,
-    DPTYPE : types::DisplayTypeTrait,
-{
-    fn init(&mut self) -> Result<(), Hd44780Error> {
-        self.interface.init(
-            self.dp_type.lines(), 
-            self.dp_type.font()
-        ).map_err(|e| Hd44780Error::InterfaceError(e))?;
-
-        self.display(DpState::On, DpCursor::Off, DpBlink::Off)?;
-        self.clear()
-    }
-
-    fn clear(&mut self) -> Result<(), Hd44780Error> {
-        self.interface.send_byte::<false>(
-            CmdOptions::Clear as u8
-        ).map_err(|e| Hd44780Error::InterfaceError(e))?;
-        self.interface.delay_us(1_520);
-        Ok(())
-    }
-
-    fn home(&mut self) -> Result<(), Hd44780Error> {
-        self.interface.send_byte::<false>(
-            CmdOptions::Home as u8
-        ).map_err(|e| Hd44780Error::InterfaceError(e))?;
-        self.interface.delay_us(1_520);
-        Ok(())
-    }
-
-    fn entry(&mut self, dir:EntryDir, ads:EntryAds) -> Result<(), Hd44780Error> {
-        self.interface.send_byte::<false>(
-            CmdOptions::Entry as u8 | dir as u8 | ads as u8
-        ).map_err(|e| Hd44780Error::InterfaceError(e))
-    }
-
-    fn display(&mut self, state:DpState, cursor:DpCursor, blink:DpBlink) -> Result<(), Hd44780Error> {
-        self.interface.send_byte::<false>(
-            CmdOptions::Dp as u8 | state as u8 | cursor as u8 | blink as u8
-        ).map_err(|e| Hd44780Error::InterfaceError(e))
-    }
-
-    fn shift(&mut self, dp_type:ShiftType, dir:ShiftDir) -> Result<(), Hd44780Error> {
-        self.interface.send_byte::<false>(
-            CmdOptions::Shift as u8 | dp_type as u8 | dir as u8
-        ).map_err(|e| Hd44780Error::InterfaceError(e))
-    }
-
-    fn position(&mut self, row:u8, col:u8) -> Result<(), Hd44780Error> {
-        if row >= self.dp_type.rows() || col >= self.dp_type.cols() {
-            return Err(Hd44780Error::RowColOutOfRange);
-        }
-
-        let dd: u8 = match self.dp_type.lines() {
-            FnsetLines::One => self.dp_type.cols() * row + col,
-            FnsetLines::Two => 0x40 * (row % 2) + self.dp_type.cols() * (row / 2) + col,
-        };
-        self.interface.send_byte::<false>(
-            CmdOptions::SetDd as u8 | dd
-        ).map_err(|e| Hd44780Error::InterfaceError(e))
-    }
-
-    fn print_bytes(&mut self, bytes:&[u8]) -> Result<(), Hd44780Error> {
-        self.interface.send_bytes::<true>(
-            bytes
-        ).map_err(|e| Hd44780Error::InterfaceError(e))
-    }
-
-    fn backlight(&mut self, bl:bool) -> Result<(), Hd44780Error> {
-        self.interface.backlight(bl).map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )
-    }
-
-    fn read_data(&mut self, buffer:&mut [u8]) -> Result<(), Hd44780Error> {
-        self.interface.receive_bytes::<true>(buffer).map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )
-    }
-
-    fn read_address_counter(&mut self) -> Result<u8, Hd44780Error> {
-        let mut ac: u8 = 0;
-        self.interface.receive_byte::<false>(&mut ac).map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )?;
-        Ok(ac & 0x7f)
-    }
-
-    fn is_busy(&mut self) -> Result<bool, Hd44780Error> {
-        let mut ac: u8 = 0;
-        self.interface.receive_byte::<false>(&mut ac).map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )?;
-        Ok((ac & 0x80) != 0)
-    }
-}
-
-#[cfg(not(feature="async"))]
-impl<INTERFACE> Hd44780<INTERFACE, types::DisplayTypeFont5x8>
-where
-    INTERFACE: interface::InterfaceTrait,
-{
-    pub fn create_char(
-        &mut self, 
-        charcode: characters::CustomFont5x8, 
-        charmap:[u8;8]
-    ) -> Result<(), Hd44780Error>
-    {
-        // Set EntryMode to increment and turn off Accompanies display shift.
-        self.entry(EntryDir::Inc, EntryAds::Off)?;
-
-        self.interface.send_byte::<false>(
-            CmdOptions::SetCg as u8 | ( ((charcode as u8) & 0b0000_0111) << 3 )
-        ).map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )?;
-        self.interface.send_bytes::<true>(&charmap).map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )
-    }
-}
-
-#[cfg(not(feature="async"))]
-impl<INTERFACE> Hd44780<INTERFACE, types::DisplayTypeFont5x10>
-where
-    INTERFACE: interface::InterfaceTrait,
-{
-    pub fn create_char(
-        &mut self, 
-        charcode:characters::CustomFont5x10, 
-        charmap:[u8;10]
-    ) -> Result<(), Hd44780Error> 
-    {
-        // Set EntryMode to increment and turn off Accompanies display shift.
-        self.entry(EntryDir::Inc, EntryAds::Off)?;
-
-        self.interface.send_byte::<false>(
-            CmdOptions::SetCg as u8 | ( ((charcode as u8) & 0b0000_0110) << 3 )
-        ).map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )?;
-        self.interface.send_bytes::<true>(&charmap).map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )
-    }
-}
-
-
 #[macro_export]
-#[cfg(not(feature="async"))]
-macro_rules! lcd_write {
-    ($dp:expr, $($arg:tt)*) => {
-        $dp.print_fmt(format_args!($($arg)*))
-    };
-}
-
-#[cfg(feature="async")]
-pub trait Hd44780Trait {
-    async fn init(&mut self) -> Result<(), Hd44780Error>;
-
-    async fn clear(&mut self) -> Result<(), Hd44780Error>;
-    async fn home(&mut self) -> Result<(), Hd44780Error>;
-    async fn entry(&mut self, dir:EntryDir, ads:EntryAds) -> Result<(), Hd44780Error>;
-    async fn display(&mut self, state:DpState, cursor:DpCursor, blink:DpBlink) -> Result<(), Hd44780Error>;
-    async fn shift(&mut self, dp_type:ShiftType, dir:ShiftDir) -> Result<(), Hd44780Error>;
-    async fn position(&mut self, row:u8, col:u8) -> Result<(), Hd44780Error>;
-
-    async fn print_bytes(&mut self, bytes:&[u8]) -> Result<(), Hd44780Error>;
-    async fn print_str(&mut self, string:&str) -> Result<(), Hd44780Error> {
-        self.print_bytes(string.as_bytes()).await?;
-        Ok(())
-    }
-    async fn print_fmt(&mut self, args:core::fmt::Arguments<'_>) -> Result<(), Hd44780Error> {
-        let mut data:[u8;FMT_BUFFER_SIZE] = [0;FMT_BUFFER_SIZE];
-        let mut buf = UnsafeBuffer::new(&mut data);
-
-        match core::fmt::write(&mut buf, args)
-        {
-            Err(e) => Err(Hd44780Error::FmtError(e)),
-            Ok(_) => self.print_str(buf.as_str()).await
-        }
-    }
-
-    async fn backlight(&mut self, bl:bool) -> Result<(), Hd44780Error>;
-
-    async fn read_data(&mut self, buffer:&mut [u8]) -> Result<(), Hd44780Error>;
-    async fn read_address_counter(&mut self) -> Result<u8, Hd44780Error>;
-    async fn is_busy(&mut self) -> Result<bool, Hd44780Error>;
-}
-
-#[cfg(feature="async")]
-impl<INTERFACE, DPTYPE> Hd44780<INTERFACE, DPTYPE>
-where
-    INTERFACE: interface::InterfaceTrait,
-    DPTYPE: types::DisplayTypeTrait,
-{
-    pub fn new(interface: INTERFACE, dp_type: DPTYPE) -> Self {
-        Self {
-            interface,
-            dp_type,
-        }
-    }
-}
-
-
-#[cfg(feature="async")]
-impl<INTERFACE, DPTYPE> Hd44780Trait for Hd44780<INTERFACE, DPTYPE>
-where
-    INTERFACE: interface::InterfaceTrait,
-    DPTYPE: types::DisplayTypeTrait,
-{
-    async fn init(&mut self) -> Result<(), Hd44780Error> {
-        self.interface.init(
-            self.dp_type.lines(), 
-            self.dp_type.font()
-        ).await.map_err(|e| Hd44780Error::InterfaceError(e))?;
-
-        self.display(DpState::On, DpCursor::Off, DpBlink::Off).await?;
-        self.clear().await
-    }
-
-    async fn clear(&mut self) -> Result<(), Hd44780Error> {
-        self.interface.send_byte::<false>(
-            CmdOptions::Clear as u8
-        ).await.map_err(|e| Hd44780Error::InterfaceError(e))?;
-        self.interface.delay_us(1_520).await;
-        Ok(())
-    }
-
-    async fn home(&mut self) -> Result<(), Hd44780Error> {
-        self.interface.send_byte::<false>(
-            CmdOptions::Home as u8
-        ).await.map_err(|e| Hd44780Error::InterfaceError(e))?;
-        self.interface.delay_us(1_520).await;
-        Ok(())
-    }
-
-    async fn entry(&mut self, dir:EntryDir, ads:EntryAds) -> Result<(), Hd44780Error> {
-        self.interface.send_byte::<false>(
-            CmdOptions::Entry as u8 | dir as u8 | ads as u8
-        ).await.map_err(|e| Hd44780Error::InterfaceError(e))
-    }
-
-    async fn display(&mut self, state:DpState, cursor:DpCursor, blink:DpBlink) -> Result<(), Hd44780Error> {
-        self.interface.send_byte::<false>(
-            CmdOptions::Dp as u8 | state as u8 | cursor as u8 | blink as u8
-        ).await.map_err(|e| Hd44780Error::InterfaceError(e))
-    }
-
-    async fn shift(&mut self, dp_type:ShiftType, dir:ShiftDir) -> Result<(), Hd44780Error> {
-        self.interface.send_byte::<false>(
-            CmdOptions::Shift as u8 | dp_type as u8 | dir as u8
-        ).await.map_err(|e| Hd44780Error::InterfaceError(e))
-    }
-
-    async fn position(&mut self, row:u8, col:u8) -> Result<(), Hd44780Error> {
-        if row >= self.dp_type.rows() || col >= self.dp_type.cols() {
-            return Err(Hd44780Error::RowColOutOfRange);
-        }
-
-        let dd: u8 = match self.dp_type.lines() {
-            FnsetLines::One => self.dp_type.cols() * row + col,
-            FnsetLines::Two => 0x40 * (row % 2) + self.dp_type.cols() * (row / 2) + col,
-        };
-        self.interface.send_byte::<false>(
-            CmdOptions::SetDd as u8 | dd
-        ).await.map_err(|e| Hd44780Error::InterfaceError(e))
-    }
-
-    async fn print_bytes(&mut self, bytes:&[u8]) -> Result<(), Hd44780Error> {
-        self.interface.send_bytes::<true>(
-            bytes
-        ).await.map_err(|e| Hd44780Error::InterfaceError(e))
-    }
-
-    async fn backlight(&mut self, bl:bool) -> Result<(), Hd44780Error> {
-        self.interface.backlight(bl)
-        .await.map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )
-    }
-
-    async fn read_data(&mut self, buffer:&mut [u8]) -> Result<(), Hd44780Error> {
-        self.interface.receive_bytes::<true>(buffer)
-        .await.map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )
-    }
-
-    async fn read_address_counter(&mut self) -> Result<u8, Hd44780Error> {
-        let mut ac: u8 = 0;
-        self.interface.receive_byte::<false>(&mut ac)
-        .await.map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )?;
-        Ok(ac & 0x7f)
-    }
-
-    async fn is_busy(&mut self) -> Result<bool, Hd44780Error> {
-        let mut ac: u8 = 0;
-        self.interface.receive_byte::<false>(&mut ac)
-        .await.map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )?;
-        Ok((ac & 0x80) != 0)
-    }
-}
-
-#[cfg(feature="async")]
-impl<INTERFACE> Hd44780<INTERFACE, types::DisplayTypeFont5x8>
-where
-    INTERFACE: interface::InterfaceTrait,
-{
-    pub async fn create_char(
-        &mut self, 
-        charcode: characters::CustomFont5x8, 
-        charmap:[u8;8]
-    ) -> Result<(), Hd44780Error> 
-    {
-        // Set EntryMode to increment and turn off Accompanies display shift.
-        self.entry(EntryDir::Inc, EntryAds::Off).await?;
-
-        self.interface.send_byte::<false>(
-            CmdOptions::SetCg as u8 | ( ((charcode as u8) & 0b0000_0111) << 3)
-        ).await.map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )?;
-        self.interface.send_bytes::<true>(&charmap).await.map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )
-    }
-}
-
-#[cfg(feature="async")]
-impl<INTERFACE> Hd44780<INTERFACE, types::DisplayTypeFont5x10>
-where
-    INTERFACE: interface::InterfaceTrait,
-{
-    pub async fn create_char(
-        &mut self, 
-        charcode:characters::CustomFont5x10, 
-        charmap:[u8;10]
-    ) -> Result<(), Hd44780Error> 
-    {
-        // Set EntryMode to increment and turn off Accompanies display shift.
-        self.entry(EntryDir::Inc, EntryAds::Off).await?;
-        
-        self.interface.send_byte::<false>(
-            CmdOptions::SetCg as u8 | ( ((charcode as u8) & 0b0000_0110) << 3 )
-        ).await.map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )?;
-        self.interface.send_bytes::<true>(
-            &charmap
-        ).await.map_err(
-            |e| Hd44780Error::InterfaceError(e)
-        )
-    }
-}
-
-
-#[macro_export]
-#[cfg(feature="async")]
 macro_rules! lcd_write {
     ($dp:expr, $($arg:tt)*) => {
         $dp.print_fmt(format_args!($($arg)*))
@@ -468,45 +96,3 @@ macro_rules! lcd_write {
 }
 
 
-
-/// UnsafeBuffer implements [`trait core::fmt::Write`]
-/// This is used for printing format_args to display.
-/// Uses [`from_utf8_unchecked`] so the non ASCII chars from [`characters.rs`] can be printed. 
-struct UnsafeBuffer<'a> {
-    buf : &'a mut[u8],
-    len : usize,
-}
-
-impl<'a> UnsafeBuffer<'a> {
-    #[inline]
-    pub fn new(buf:&'a mut [u8]) -> Self {
-        Self { buf, len:0 }
-    }
-
-    pub fn as_str(&self) -> &str {
-        unsafe {
-            core::str::from_utf8_unchecked(&self.buf[0..self.len])
-        }
-    }
-}
-
-impl<'a> core::fmt::Write for UnsafeBuffer<'a> {
-    fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        let b = s.as_bytes();
-        if self.len + b.len() > self.buf.len() {
-            return Err(core::fmt::Error);
-        }
-
-        self.buf[self.len..self.len+b.len()].clone_from_slice(b);
-
-        self.len += b.len();
-        Ok(())
-    }
-
-    fn write_char(&mut self, c: char) -> core::fmt::Result {
-        self.buf[self.len] = c as u8;
-        self.len += 1;
-        
-        Ok(())
-    }
-}
