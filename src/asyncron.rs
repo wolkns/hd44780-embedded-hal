@@ -10,7 +10,8 @@ use crate::buffer::UnsafeBuffer;
 
 
 const FMT_BUFFER_SIZE:usize = 64;
-
+const PING_DDRAM_ADDR : u8     = 0x13;
+const PING_DDRAM_ADDR_ALT : u8 = 0x0e;
 
 pub trait Hd44780Trait<DPTYPE>
 where DPTYPE: types::DisplayTypeTrait,
@@ -51,6 +52,8 @@ where DPTYPE: types::DisplayTypeTrait,
     async fn read_data(&mut self, buffer:&mut [u8]) -> Result<(), Hd44780Error>;
     async fn read_address_counter(&mut self) -> Result<u8, Hd44780Error>;
     async fn is_busy(&mut self) -> Result<bool, Hd44780Error>;
+
+    async fn ping(&mut self) -> Result<bool, Hd44780Error>;
 }
 
 
@@ -173,6 +176,43 @@ where
             |e| Hd44780Error::InterfaceError(e)
         )?;
         Ok((ac & 0x80) != 0)
+    }
+    
+    /// Pings the lcd controller by: 
+    ///  -> reading ac value
+    ///  -> changeing ac value
+    ///  -> reading ac value
+    ///  -> compare if the change happend
+    /// If successfull it writes the initialy read adress counter
+    /// back as DDRAM address.
+
+    /// WARNING!!!!: If you had set the CGRAM before, 
+    /// you may encounter unwanted behaviour.
+    /// CGRAM is set create_char().
+    async fn ping(&mut self) -> Result<bool, Hd44780Error> {
+        // init read address counter
+        let previous_ac: u8 = self.read_address_counter().await?;
+        
+        // change ac
+        let new_ac = match previous_ac == PING_DDRAM_ADDR {
+            true => PING_DDRAM_ADDR_ALT,
+            false => PING_DDRAM_ADDR
+        };
+        self.interface.send_byte::<false>(
+            CmdOptions::SetDd as u8 | new_ac
+        ).await.map_err(|e| Hd44780Error::InterfaceError(e))?;
+
+        // read again and compare
+        if new_ac != self.read_address_counter().await? {
+            return Ok(false);
+        }
+
+        // restore previous ac as DDRAM address
+        self.interface.send_byte::<false>(
+            CmdOptions::SetDd as u8 | previous_ac
+        ).await.map_err(|e| Hd44780Error::InterfaceError(e))?;
+
+        Ok(true)
     }
 }
 

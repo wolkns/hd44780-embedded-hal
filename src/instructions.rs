@@ -2,7 +2,7 @@
 
 #[derive(Copy, Clone)]
 #[repr(u8)]
-pub(crate) enum CmdOptions {
+pub enum CmdOptions {
     Clear = 0x01,
     Home  = 0x02,
     Entry = 0x04,
