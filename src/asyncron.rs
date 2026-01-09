@@ -1,6 +1,6 @@
 
 use crate::{
-    Hd44780, Hd44780Error, instructions::*, interface, lcd_write, types
+    Hd44780, Hd44780Error, instructions::*, interface, types
 };
 use crate::buffer::UnsafeBuffer;
 
