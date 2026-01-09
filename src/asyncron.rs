@@ -1,10 +1,6 @@
 
 use crate::{
-    Hd44780,
-    Hd44780Error,
-    interface,
-    types,
-    instructions::*
+    Hd44780, Hd44780Error, instructions::*, interface, lcd_write, types
 };
 use crate::buffer::UnsafeBuffer;
 
@@ -202,8 +198,10 @@ where
             CmdOptions::SetDd as u8 | new_ac
         ).await.map_err(|e| Hd44780Error::InterfaceError(e))?;
 
+        let read_new_ac = self.read_address_counter().await?;
+
         // read again and compare
-        if new_ac != self.read_address_counter().await? {
+        if new_ac != read_new_ac {
             return Ok(false);
         }
 

@@ -209,17 +209,6 @@ where
         ).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
         Ok(())
     }
-     
-    async fn send_bytes<const RS_VAL:bool>(
-        &mut self,
-        bytes: &[u8]
-    ) -> Result<(), InterfaceError>
-    {
-        for &byte in bytes {
-            self.send_byte::<RS_VAL>(byte).await?;
-        }
-        Ok(())
-    }
 
     async fn receive_byte<const RS_VAL:bool>(
         &mut self, 
@@ -227,18 +216,21 @@ where
     ) -> Result<(), super::InterfaceError> 
     {
         let payload = self.enc.encode::<RS_VAL, true>(self.bl, 0x0f);
-        // use payload[1..3] to prime read process
+        // use payload[1..=2] to prime read process and handle the protocol
+        // to reliably read from pcf8574 pin, it needs to be
+        // be written high before.
+        // Thats why the least significat nibble in payloads data is all high bits.
         
         let mut msn: [u8;1] = [0];
         let mut lsn: [u8;1] = [0];
 
         let mut transactions = [
-            i2c::Operation::Write(&payload[2..3]),
+            i2c::Operation::Write(&payload[1..=2]),
             i2c::Operation::Read(&mut msn),
-            i2c::Operation::Write(&payload[1..3]),
+            i2c::Operation::Write(&payload[1..=2]),
             i2c::Operation::Read(&mut lsn),
-            i2c::Operation::Write(&payload[1..2]),
-        ];
+            i2c::Operation::Write(&payload[1..=1]), // maybe 3
+        ]; 
         self.i2c.transaction(
             self.address,
              &mut transactions
@@ -246,17 +238,6 @@ where
 
         *byte = self.enc.decode_data([msn[0], lsn[0]]);
 
-        Ok(())
-    }
-
-    async fn receive_bytes<const RS_VAL:bool>(
-        &mut self, 
-        bytes: &mut [u8] 
-    ) -> Result<(), InterfaceError>
-    {
-        for byte in bytes {
-            self.receive_byte::<RS_VAL>(byte).await?;
-        }
         Ok(())
     }
 
@@ -350,7 +331,7 @@ for Pcf8574EncoderDefault<RS,RNW,EN,BL> {
               (RS_VAL as u8)*RS | (RNW_VAL as u8)*RNW | (bl as u8)*BL | ((data & 0x0f) << 4),]
     }
     fn decode_data(&self, data: [u8;2]) -> u8 {
-        (data[0] & 0xf0) | ((data[1] & 0xf0) >> 4)
+        (data[0] & 0xf0) | (data[1] >> 4)
     }
 }
 
