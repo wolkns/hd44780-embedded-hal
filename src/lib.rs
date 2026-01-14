@@ -67,6 +67,7 @@ pub enum Hd44780Error {
     InterfaceError(interface::InterfaceError),
     FmtError(core::fmt::Error),
     RowColOutOfRange,
+    PingError
 }
 
 impl From<core::fmt::Error> for Hd44780Error
@@ -82,7 +83,8 @@ impl From<&Hd44780Error> for &'static str
         match err {
             Hd44780Error::InterfaceError(_) => "Inteface Error",
             Hd44780Error::FmtError(_) => "Formatting Error",
-            Hd44780Error::RowColOutOfRange => "Row or Column out of Range"
+            Hd44780Error::RowColOutOfRange => "Row or Column out of Range",
+            Hd44780Error::PingError => "Ping Error",
         }
     }
 }

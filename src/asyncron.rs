@@ -49,7 +49,7 @@ where DPTYPE: types::DisplayTypeTrait,
     async fn read_address_counter(&mut self) -> Result<u8, Hd44780Error>;
     async fn is_busy(&mut self) -> Result<bool, Hd44780Error>;
 
-    async fn ping(&mut self) -> Result<bool, Hd44780Error>;
+    async fn ping(&mut self) -> Result<(), Hd44780Error>;
 }
 
 
@@ -185,7 +185,7 @@ where
     /// WARNING!!!!: If you had set the CGRAM before, 
     /// you may encounter unwanted behaviour.
     /// CGRAM is set create_char().
-    async fn ping(&mut self) -> Result<bool, Hd44780Error> {
+    async fn ping(&mut self) -> Result<(), Hd44780Error> {
         // init read address counter
         let previous_ac: u8 = self.read_address_counter().await?;
         
@@ -202,7 +202,7 @@ where
 
         // read again and compare
         if new_ac != read_new_ac {
-            return Ok(false);
+            return Err(Hd44780Error::PingError);
         }
 
         // restore previous ac as DDRAM address
@@ -210,7 +210,7 @@ where
             CmdOptions::SetDd as u8 | previous_ac
         ).await.map_err(|e| Hd44780Error::InterfaceError(e))?;
 
-        Ok(true)
+        Ok(())
     }
 }
 
