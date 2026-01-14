@@ -4,9 +4,8 @@ Driver library for HD44780-LCD built ontop of [`embedded-hal`] or [`embedded-hal
 If you want to make use of the [`embedded-hal-async`] traits, set the [`async`] feature.
 This crate can then be used with crates that implement there traits.
 
-* [on crates.io](https://crates.io/crates/hd44780-embedded-hal)
-* [on github](https://github.com/wolkns/hd44780-embedded-hal)
-* [Documentation](https://docs.rs/hd44780-embedded-hal/0.1.3/hd44780_embedded_hal/)
++ [on crates.io](https://crates.io/crates/hd44780-embedded-hal)
++ [on github](https://github.com/wolkns/hd44780-embedded-hal)
 
 ## Quick Example
 
@@ -46,14 +45,19 @@ lcd_write!(
 
 This library implements the following interfaces to connect HD44780 with your microcontroller:
 
-* PCF8574
-  * 8-bit portexpander through I2C
-* GPIO 4-bit data length
-  * requires 8 GPIO pins
-* GPIO 8-bit data length
-  * requires 12 GPIO pins
++ PCF8574
+  + 8-bit portexpander through I2C
++ GPIO 4-bit data length
+  + requires 8 GPIO pins
++ GPIO 8-bit data length
+  + requires 12 GPIO pins
 
 ## ToDo's
 
-* There are some characters not defined in [`characters.rs`].
-* Testing of GPIO Interfaces
++ There are some characters not defined in [`characters.rs`].
++ Testing of GPIO Interfaces
+
+## Version History
+
++ **< 0.1.3** First versions
++ **0.1.4**  made crate more *generic* (create_char), added ping functionality
