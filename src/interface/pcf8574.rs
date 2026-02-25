@@ -104,21 +104,19 @@ where
 
     fn receive_byte<const RS_VAL:bool>(&mut self, byte: &mut u8) -> Result<(), super::InterfaceError> {
         let payload = self.enc.encode::<RS_VAL, true>(self.bl, 0x0f);
-        // use payload[1..3] to prime read process
+        // use payload[1..=2] to prime read process and handle the protocol
+        // to reliably read from pcf8574 pin, it needs to be
+        // be written high before.
+        // Thats why the least significat nibble in payloads data is all high bits.
         
         let mut msn: [u8;1] = [0];
         let mut lsn: [u8;1] = [0];
 
-        let mut transactions = [
-            i2c::Operation::Write(&payload[2..3]),
-            i2c::Operation::Read(&mut msn),
-            i2c::Operation::Write(&payload[1..3]),
-            i2c::Operation::Read(&mut lsn),
-            i2c::Operation::Write(&payload[1..2]),
-        ];
-        self.i2c.transaction(self.address, &mut transactions).map_err(
-            |_| InterfaceError::Pcf8574I2cError
-        )?;
+        self.i2c.write(self.address, &payload[1..=2]).map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.i2c.read(self.address, &mut msn).map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.i2c.write(self.address, &payload[1..=2]).map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.i2c.read(self.address, &mut lsn).map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.i2c.write(self.address, &payload[1..=1]).map_err(|_| InterfaceError::Pcf8574I2cError)?;
 
         *byte = self.enc.decode_data([msn[0], lsn[0]]);
 
@@ -140,7 +138,6 @@ where
         self.delay.delay_us(us);
     }
 }
-
 
 
 
@@ -224,17 +221,11 @@ where
         let mut msn: [u8;1] = [0];
         let mut lsn: [u8;1] = [0];
 
-        let mut transactions = [
-            i2c::Operation::Write(&payload[1..=2]),
-            i2c::Operation::Read(&mut msn),
-            i2c::Operation::Write(&payload[1..=2]),
-            i2c::Operation::Read(&mut lsn),
-            i2c::Operation::Write(&payload[1..=1]), // maybe 3
-        ]; 
-        self.i2c.transaction(
-            self.address,
-             &mut transactions
-        ).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.i2c.write(self.address, &payload[1..=2]).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.i2c.read(self.address, &mut msn).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.i2c.write(self.address, &payload[1..=2]).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.i2c.read(self.address, &mut lsn).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
+        self.i2c.write(self.address, &payload[1..=1]).await.map_err(|_| InterfaceError::Pcf8574I2cError)?;
 
         *byte = self.enc.decode_data([msn[0], lsn[0]]);
 
