@@ -56,8 +56,3 @@ This library implements the following interfaces to connect HD44780 with your mi
 
 + There are some characters not defined in [`characters.rs`].
 + Testing of GPIO Interfaces
-
-## Version History
-
-+ **< 0.1.3** First versions
-+ **0.1.4**  made crate more *generic* (create_char), added ping functionality
